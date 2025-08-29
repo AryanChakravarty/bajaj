@@ -11,9 +11,9 @@ class DataRequest(BaseModel):
 
 class DataResponse(BaseModel):
     is_success: bool = Field(..., example=True)
-    user_id: str = Field(..., example="aryan_chakravarty_29082025")
-    email: str = Field(..., example="aryan@xyz.com")
-    roll_number: str = Field(..., example="ABCD123")
+    user_id: str = Field(..., example="aryan_chakravarty_14092004")
+    email: str = Field(..., example="aryan.chakravarty2022@vitstudent.ac.in")
+    roll_number: str = Field(..., example="22BCE0590")
     odd_numbers: List[str] = Field(..., example=["5"])
     even_numbers: List[str] = Field(..., example=["2", "4", "92"])
     alphabets: List[str] = Field(..., example=["A", "Y", "B"])
@@ -102,9 +102,10 @@ async def process_data(request: DataRequest):
             else:
                 special_characters.append(item)
         
-        # Generate user_id with current date
-        current_date = datetime.now()
-        user_id = f"aryan_chakravarty_{current_date.strftime('%d%m%Y')}"
+        # Fixed identity details as requested
+        user_id = "aryan_chakravarty_14092004"
+        fixed_email = "aryan.chakravarty2022@vitstudent.ac.in"
+        fixed_roll = "22BCE0590"
         
         # Create alternating case string
         concat_string = create_alternating_case_string(alphabets)
@@ -113,8 +114,8 @@ async def process_data(request: DataRequest):
         return DataResponse(
             is_success=True,
             user_id=user_id,
-            email="aryan@xyz.com",
-            roll_number="ABCD123",
+            email=fixed_email,
+            roll_number=fixed_roll,
             odd_numbers=odd_numbers,
             even_numbers=even_numbers,
             alphabets=alphabets,

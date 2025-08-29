@@ -1,5 +1,5 @@
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import List
 import re
 from datetime import datetime
@@ -7,42 +7,19 @@ from datetime import datetime
 app = FastAPI(title="BFHL API", description="REST API for processing data arrays")
 
 class DataRequest(BaseModel):
-    data: List[str]
-
-    class Config:
-        schema_extra = {
-            "example": {
-                "data": ["2", "a", "y", "4", "&", "-", "*", "5", "92", "b"]
-            }
-        }
+    data: List[str] = Field(..., example=["2", "a", "y", "4", "&", "-", "*", "5", "92", "b"])
 
 class DataResponse(BaseModel):
-    is_success: bool
-    user_id: str
-    email: str
-    roll_number: str
-    odd_numbers: List[str]
-    even_numbers: List[str]
-    alphabets: List[str]
-    special_characters: List[str]
-    sum: str
-    concat_string: str
-
-    class Config:
-        schema_extra = {
-            "example": {
-                "is_success": True,
-                "user_id": "aryan_chakravarty_17091999",
-                "email": "aryan@xyz.com",
-                "roll_number": "ABCD123",
-                "odd_numbers": ["5"],
-                "even_numbers": ["2", "4", "92"],
-                "alphabets": ["A", "Y", "B"],
-                "special_characters": ["&", "-", "*"],
-                "sum": "103",
-                "concat_string": "ByA"
-            }
-        }
+    is_success: bool = Field(..., example=True)
+    user_id: str = Field(..., example="aryan_chakravarty_29082025")
+    email: str = Field(..., example="aryan@xyz.com")
+    roll_number: str = Field(..., example="ABCD123")
+    odd_numbers: List[str] = Field(..., example=["5"])
+    even_numbers: List[str] = Field(..., example=["2", "4", "92"])
+    alphabets: List[str] = Field(..., example=["A", "Y", "B"])
+    special_characters: List[str] = Field(..., example=["&", "-", "*"])
+    sum: str = Field(..., example="103")
+    concat_string: str = Field(..., example="ByA")
 
 def is_number(s: str) -> bool:
     """Check if a string represents a valid number"""
@@ -62,62 +39,78 @@ def is_special_character(s: str) -> bool:
 
 def create_alternating_case_string(alphabets: List[str]) -> str:
     """Create alternating case string from alphabetic characters"""
-    # Concatenate all alphabetic values in order of appearance
-    concat = ''.join(alphabets)
+    if not alphabets:
+        return ""
+    
+    # Concatenate all alphabets in order of appearance
+    concat_str = "".join(alphabets)
+    
     # Reverse the string
-    reversed_str = concat[::-1]
-    # Make it alternating caps, starting with uppercase
+    reversed_str = concat_str[::-1]
+    
+    # Apply alternating case (first letter uppercase, second lowercase, etc.)
     result = ""
     for i, char in enumerate(reversed_str):
         if i % 2 == 0:
             result += char.upper()
         else:
             result += char.lower()
+    
     return result
+
+@app.get("/")
+async def root():
+    """Root endpoint"""
+    return {"message": "BFHL API is running! Use POST /bfhl to process data."}
+
+@app.get("/health")
+async def health_check():
+    """Health check endpoint"""
+    return {"status": "healthy"}
 
 @app.post("/bfhl", response_model=DataResponse)
 async def process_data(request: DataRequest):
+    """
+    Process the input data array and return categorized results.
+    
+    - **data**: Array of strings to process
+    - **Returns**: Categorized data with various metrics
+    """
     try:
         data = request.data
         
-        # Separate numbers, alphabets, and special characters
-        numbers = []
+        # Initialize result variables
+        even_numbers = []
+        odd_numbers = []
         alphabets = []
-        special_chars = []
+        special_characters = []
+        numeric_sum = 0
         
+        # Process each item in the data array
         for item in data:
             if is_number(item):
-                numbers.append(item)
+                num = float(item)
+                if num.is_integer():
+                    num = int(num)
+                    if num % 2 == 0:
+                        even_numbers.append(str(num))
+                    else:
+                        odd_numbers.append(str(num))
+                    numeric_sum += num
             elif is_alphabetic(item):
                 alphabets.append(item.upper())
             else:
-                special_chars.append(item)
+                special_characters.append(item)
         
-        # Separate even and odd numbers
-        even_numbers = []
-        odd_numbers = []
-        total_sum = 0
-        
-        for num_str in numbers:
-            try:
-                num = int(float(num_str))
-                if num % 2 == 0:
-                    even_numbers.append(num_str)
-                else:
-                    odd_numbers.append(num_str)
-                total_sum += num
-            except ValueError:
-                # Handle cases where conversion to int fails
-                continue
-        
-        # Create user_id with current date
-        current_date = datetime.now().strftime("%d%m%Y")
-        user_id = f"aryan_chakravarty_{current_date}"
+        # Generate user_id with current date
+        current_date = datetime.now()
+        user_id = f"aryan_chakravarty_{current_date.strftime('%d%m%Y')}"
         
         # Create alternating case string
         concat_string = create_alternating_case_string(alphabets)
         
-        response = DataResponse(
+        # Return the response
+        return DataResponse(
             is_success=True,
             user_id=user_id,
             email="aryan@xyz.com",
@@ -125,15 +118,13 @@ async def process_data(request: DataRequest):
             odd_numbers=odd_numbers,
             even_numbers=even_numbers,
             alphabets=alphabets,
-            special_characters=special_chars,
-            sum=str(total_sum),
+            special_characters=special_characters,
+            sum=str(int(numeric_sum)),
             concat_string=concat_string
         )
         
-        return response
-        
     except Exception as e:
-        # Return error response if parsing fails
+        # Return error response
         return DataResponse(
             is_success=False,
             user_id="",
@@ -143,18 +134,14 @@ async def process_data(request: DataRequest):
             even_numbers=[],
             alphabets=[],
             special_characters=[],
-            sum="",
+            sum="0",
             concat_string=""
         )
 
-@app.get("/")
-async def root():
-    return {"message": "BFHL API is running. Use POST /bfhl to process data."}
-
-@app.get("/health")
-async def health_check():
-    return {"status": "healthy"}
-
 if __name__ == "__main__":
     import uvicorn
+    print("🚀 Starting BFHL API server...")
+    print("📡 Server will be available at: http://localhost:8000")
+    print("📚 API documentation: http://localhost:8000/docs")
+    print("🏥 Health check: http://localhost:8000/health")
     uvicorn.run(app, host="0.0.0.0", port=8000)
